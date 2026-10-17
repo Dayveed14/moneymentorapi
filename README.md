@@ -11,6 +11,7 @@ public/            web root (only this folder is reachable from the internet)
 src/               shared code: config, DB, auth tokens, rate limiting, helpers
 database/schema.sql
 bin/migrate.php    creates/upgrades tables + first admin (runs on every start-up)
+src/modules.php    learning module + lesson ids (keep in sync with the frontend's src/data/modules.js)
 bin/move_images_to_cloudinary.php   one-off: moves existing images to Cloudinary
 docker/            Apache, PHP and start-up config
 Dockerfile, docker-compose.yml, render.yaml
@@ -29,6 +30,11 @@ Dockerfile, docker-compose.yml, render.yaml
 | GET/POST | `/api/admin_articles.php` | admin | List all articles / `{action: publish\|unpublish\|delete, id}` |
 | GET | `/api/admin_users.php?page&search` | admin | Users list |
 | GET | `/api/admin_stats.php` | admin | Dashboard numbers + recent activity |
+| GET/POST | `/api/progress.php` | logged in | Lessons completed + quiz results / `{module, lesson, completed}` |
+| POST | `/api/quiz_attempt.php` | logged in | `{module, score, total}` — pass mark 80% |
+| GET/POST | `/api/budget.php` | logged in | The user's saved budget plan |
+| GET/POST | `/api/saved_articles.php` | logged in | Bookmarks / `{article_id, saved}` |
+| POST | `/api/profile.php` | logged in | `update_name` or `change_password` |
 | POST | `/api/contact.php` | anyone | Saves a contact message |
 | POST | `/api/subscribe.php` | anyone | Newsletter sign-up |
 | GET | `/api/health.php` | anyone | Health check for Render |

@@ -61,3 +61,40 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   hits INT UNSIGNED NOT NULL,
   window_start INT UNSIGNED NOT NULL
 ) ENGINE=InnoDB;
+
+-- ===== Learner features =====
+
+-- One row per lesson a user has finished
+CREATE TABLE IF NOT EXISTS lesson_progress (
+  user_id INT UNSIGNED NOT NULL,
+  module_id VARCHAR(40) NOT NULL,
+  lesson_id VARCHAR(60) NOT NULL,
+  completed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, module_id, lesson_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Every module quiz attempt
+CREATE TABLE IF NOT EXISTS quiz_attempts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  module_id VARCHAR(40) NOT NULL,
+  score TINYINT UNSIGNED NOT NULL,
+  total TINYINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_quiz_user (user_id, module_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Each user's saved budget plan (JSON)
+CREATE TABLE IF NOT EXISTS budgets (
+  user_id INT UNSIGNED PRIMARY KEY,
+  data MEDIUMTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Articles a user bookmarked
+CREATE TABLE IF NOT EXISTS saved_articles (
+  user_id INT UNSIGNED NOT NULL,
+  article_id INT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, article_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

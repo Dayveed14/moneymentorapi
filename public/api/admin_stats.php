@@ -17,6 +17,9 @@ $stats = [
     'views_total' => $one('SELECT COALESCE(SUM(view_count), 0) FROM articles'),
     'subscribers_total' => $one('SELECT COUNT(*) FROM subscribers'),
     'messages_unread' => $one('SELECT COUNT(*) FROM contact_messages WHERE is_read = 0'),
+    'lessons_completed' => $one('SELECT COUNT(*) FROM lesson_progress'),
+    'quiz_attempts' => $one('SELECT COUNT(*) FROM quiz_attempts'),
+    'active_learners' => $one('SELECT COUNT(DISTINCT user_id) FROM lesson_progress WHERE completed_at >= NOW() - INTERVAL 30 DAY'),
 ];
 
 // Latest events across users, articles and messages (queried separately so

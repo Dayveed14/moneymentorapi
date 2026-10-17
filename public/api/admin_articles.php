@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             json_out(['success' => true, 'message' => 'Article moved to drafts.']);
         case 'delete':
             $pdo->prepare('DELETE FROM articles WHERE id = ?')->execute([$id]);
+            $pdo->prepare('DELETE FROM saved_articles WHERE article_id = ?')->execute([$id]);
             delete_stored_image($article['image_path'], $article['image_public_id']);
             json_out(['success' => true, 'message' => 'Article deleted.']);
         default:
