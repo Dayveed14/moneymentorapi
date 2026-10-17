@@ -17,7 +17,7 @@ if ($action === 'update_name') {
     }
     db()->prepare('UPDATE users SET name = ? WHERE id = ?')->execute([$name, $user['id']]);
     $user['name'] = $name;
-    json_out(['success' => true, 'message' => 'Name updated.', 'user' => public_user($user)]);
+    json_out(['success' => true, 'message' => 'Name updated.', 'user' => public_user($user, true)]);
 }
 
 if ($action === 'change_password') {

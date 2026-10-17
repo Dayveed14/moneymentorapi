@@ -98,3 +98,31 @@ CREATE TABLE IF NOT EXISTS saved_articles (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, article_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Knowledge check (personalised learning path) =====
+CREATE TABLE IF NOT EXISTS assessments (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  score TINYINT UNSIGNED NOT NULL,
+  total TINYINT UNSIGNED NOT NULL,
+  level VARCHAR(20) NOT NULL,
+  topic_scores TEXT NOT NULL,       -- JSON: {"security": 2, "saving": 1, ...}
+  goals TEXT NOT NULL,              -- JSON: ["security", "saving"]
+  path TEXT NOT NULL,               -- JSON: recommended module order, key lessons
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_assess_user (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Scam alerts (published by admins, shown on the home page) =====
+CREATE TABLE IF NOT EXISTS scam_alerts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(160) NOT NULL,
+  summary VARCHAR(400) NOT NULL,
+  red_flags TEXT NOT NULL,          -- one red flag per line
+  what_to_do TEXT NOT NULL,         -- one step per line
+  severity ENUM('high', 'medium', 'low') NOT NULL DEFAULT 'medium',
+  status ENUM('draft', 'published') NOT NULL DEFAULT 'published',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_alerts_status (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -105,7 +105,33 @@ foreach ($tblStmt->fetchAll() as $t) {
     }
 }
 
-// 4. First admin, from ADMIN_EMAIL / ADMIN_PASSWORD (only if that email doesn't exist yet)
+// 4. Starter scam alerts, only when the table is empty (admins can edit or remove them)
+if ((int) $pdo->query('SELECT COUNT(*) FROM scam_alerts')->fetchColumn() === 0) {
+    $seed = [
+        ['"Your bank" calls asking for your OTP', 'Callers pretend to be from your bank, say there is a problem with your account and ask you to read out the code just sent to your phone.',
+         "Caller asks for an OTP, PIN, password or BVN\nThey say your account will be blocked or debited\nThey pressure you to act right now",
+         "Hang up. Your bank will never ask for your OTP\nCall your bank using the number on your card or in its official app\nIf you already shared a code, call your bank immediately to block your account", 'high'],
+        ['SMS links to "verify your BVN" or "unblock" your account', 'Text messages warn that your account or BVN will be suspended and include a link to "update" your details on a fake website.',
+         "A link in an SMS from an unknown number\nSpelling mistakes or odd web addresses\nThreats that your account will be closed today",
+         "Don't tap the link\nOpen your bank's official app or website yourself to check\nDelete the message and block the number", 'high'],
+        ['Investments that "double your money"', 'Schemes promise guaranteed, very high returns in days or weeks. Early members are paid with new members\' money until the scheme collapses.',
+         "Guaranteed returns, especially more than a few percent a month\nRewards for bringing in friends\nPressure to invest quickly before it \"closes\"",
+         "Remember: real investments never guarantee big, fast returns\nCheck whether the company is registered with your country's securities regulator\nNever invest money you can't afford to lose", 'high'],
+        ['Fake transfer alerts', 'A buyer shows or sends a fake credit alert and leaves with your goods before you notice no money arrived.',
+         "Alert arrives by SMS but your balance hasn't changed\nBuyer is in a hurry to leave\nScreenshot of a transfer instead of real money in your account",
+         "Always confirm the money in your banking app before releasing goods\nDon't rely on SMS alerts or screenshots\nTake your time; a real buyer will wait", 'medium'],
+        ['Job offers that ask for a fee', 'Fake recruiters offer well-paid jobs, then ask you to pay for training, forms or a "processing fee" before you can start.',
+         "You have to pay to get the job\nThe offer comes without a real interview\nThe pay sounds too good for the work",
+         "Never pay to get a job\nLook up the company yourself and contact it through its official website\nReport the advert to the platform where you saw it", 'medium'],
+    ];
+    $ins = $pdo->prepare('INSERT INTO scam_alerts (title, summary, red_flags, what_to_do, severity) VALUES (?, ?, ?, ?, ?)');
+    foreach ($seed as $row) {
+        $ins->execute($row);
+    }
+    out('added starter scam alerts');
+}
+
+// 5. First admin, from ADMIN_EMAIL / ADMIN_PASSWORD (only if that email doesn't exist yet)
 $adminEmail = strtolower((string) env('ADMIN_EMAIL', ''));
 $adminPass = (string) env('ADMIN_PASSWORD', '');
 if ($adminEmail !== '' && $adminPass !== '') {

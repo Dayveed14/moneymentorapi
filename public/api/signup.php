@@ -40,10 +40,11 @@ db()->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 
     ->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT)]);
 
 $user = ['id' => (int) db()->lastInsertId(), 'name' => $name, 'email' => $email, 'role' => 'user'];
+$publicUser = public_user($user) + ['assessed' => false];
 
 json_out([
     'success' => true,
     'message' => 'Account created.',
     'token' => issue_token($user),
-    'user' => public_user($user),
+    'user' => $publicUser,
 ], 201);

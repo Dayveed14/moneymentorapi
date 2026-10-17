@@ -41,5 +41,5 @@ json_out([
     'success' => true,
     'message' => 'Logged in.',
     'token' => issue_token($user),
-    'user' => public_user($user),
+    'user' => public_user($user, true),
 ]);

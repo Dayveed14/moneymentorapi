@@ -106,12 +106,18 @@ function require_user(?string $role = null): array
     return $user;
 }
 
-function public_user(array $user): array
+function public_user(array $user, bool $withOnboarding = false): array
 {
-    return [
+    $out = [
         'id' => (int) $user['id'],
         'name' => $user['name'],
         'email' => $user['email'],
         'role' => $user['role'] ?? 'user',
     ];
+    if ($withOnboarding) {
+        // Lets the frontend send new learners to the knowledge check first
+        require_once __DIR__ . '/assessment.php';
+        $out['assessed'] = user_assessed((int) $user['id']);
+    }
+    return $out;
 }

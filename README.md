@@ -38,6 +38,20 @@ Dockerfile, docker-compose.yml, render.yaml
 | POST | `/api/contact.php` | anyone | Saves a contact message |
 | POST | `/api/subscribe.php` | anyone | Newsletter sign-up |
 | GET | `/api/health.php` | anyone | Health check for Render |
+| GET/POST | `/api/assessment.php` | logged in | Latest knowledge-check result / save a new one (level, topic scores, goals, learning path) |
+| GET | `/api/get_scam_alerts.php?limit` | anyone | Published scam alerts, most severe first |
+| GET/POST | `/api/admin_scam_alerts.php` | admin | All alerts / `{action: create\|update\|delete}` |
+| POST | `/api/admin_users.php` | admin | `{action: create\|set_role\|reset_password\|delete}` (can't remove yourself or the last admin) |
+| GET | `/api/admin_user.php?id=` | admin | One user: module progress + latest knowledge check |
+| POST | `/api/update_article.php` | admin | Multipart edit; image optional (old one is removed when replaced) |
+| GET/POST | `/api/admin_messages.php?page&filter=unread` | admin | Contact inbox / `{action: mark_read\|mark_unread\|delete}` |
+| GET/POST | `/api/admin_subscribers.php?page` | admin | Subscribers / `{action: delete}` |
+| GET | `/api/admin_learning.php` | admin | Lesson completions, quiz pass rates, knowledge-check levels and goals |
+| GET | `/api/admin_export.php?type=users\|articles\|messages\|subscribers` | admin | CSV download |
+
+On start-up `bin/migrate.php` creates any missing tables (including `assessments`
+and `scam_alerts`) and seeds five starter scam alerts the first time. Edit or
+unpublish them from the admin dashboard.
 
 Logged-in requests send `Authorization: Bearer <token>`. Tokens are signed with
 `APP_SECRET` and last 7 days.
