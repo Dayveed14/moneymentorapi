@@ -1,0 +1,9 @@
+# XAMPP/shared Apache only (Docker uses docker/apache.conf instead)
+Options -Indexes
+
+# Some Apache setups drop the Authorization header before PHP sees it
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

@@ -1,0 +1,36 @@
+# Local development: API on http://localhost:8080, MySQL on localhost:3307
+#   cp .env.example .env   (then edit)
+#   docker compose up --build
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-moneymentor}
+      MYSQL_USER: ${DB_USER:-moneymentor}
+      MYSQL_PASSWORD: ${DB_PASS:-moneymentor}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootpass}
+    ports:
+      - "3307:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASS:-rootpass}"]
+      interval: 5s
+      retries: 20
+
+  api:
+    build: .
+    ports:
+      - "8080:80"
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_SSL: "false"
+      TRUST_PROXY: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  dbdata:

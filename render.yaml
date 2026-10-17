@@ -1,0 +1,33 @@
+# Render Blueprint — New > Blueprint, point it at this repo.
+# Secrets marked sync: false are entered in the Render dashboard.
+services:
+  - type: web
+    name: moneymentor-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health.php
+    envVars:
+      - key: APP_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://money-mentor-theta.vercel.app,http://localhost:5173
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "4000"   # TiDB Cloud
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_SSL
+        value: "true"   # TiDB Cloud requires TLS
+      - key: CLOUDINARY_URL     # cloudinary://<api_key>:<api_secret>@<cloud_name>
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: moneymentor/articles
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

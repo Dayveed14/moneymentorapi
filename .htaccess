@@ -1,0 +1,10 @@
+# Only for XAMPP/shared Apache, when this whole folder sits inside htdocs.
+# Everything except public/ (src/, bin/, database/, .env) is blocked.
+# (The Docker image ignores this file; it serves public/ directly.)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(?!public/) - [F,L]
+</IfModule>
+<IfModule !mod_rewrite.c>
+    Require all denied
+</IfModule>
