@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'reset_password') {
         $password = (string) ($in['password'] ?? '');
         $checkPassword($password);
-        $pdo->prepare('UPDATE users SET password = ? WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
+        $pdo->prepare('UPDATE users SET password = ?, password_changed_at = UTC_TIMESTAMP() WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
         json_out(['success' => true, 'message' => "Password reset for {$target['name']}. Share it with them securely."]);
     }
 
@@ -85,10 +85,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($target['role'] === 'admin' && $countAdmins() <= 1) {
             fail('You can\'t delete the last admin.');
         }
-        foreach (['lesson_progress', 'quiz_attempts', 'budgets', 'saved_articles', 'assessments'] as $table) {
+        foreach (['lesson_progress', 'quiz_attempts', 'budgets', 'saved_articles', 'assessments', 'expenses', 'questions', 'password_resets'] as $table) {
             $pdo->prepare("DELETE FROM $table WHERE user_id = ?")->execute([$id]);
         }
         $pdo->prepare('UPDATE articles SET author_id = NULL WHERE author_id = ?')->execute([$id]);
+        $pdo->prepare('UPDATE scam_reports SET user_id = NULL WHERE user_id = ?')->execute([$id]);
         $pdo->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
         json_out(['success' => true, 'message' => "{$target['name']}'s account was deleted."]);
     }

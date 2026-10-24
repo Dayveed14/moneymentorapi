@@ -36,10 +36,11 @@ if ($action === 'change_password') {
     if ($new === $current) {
         fail('Choose a password different from your current one.');
     }
-    db()->prepare('UPDATE users SET password = ? WHERE id = ?')
+    // Signs out other devices; this one gets a fresh token
+    db()->prepare('UPDATE users SET password = ?, password_changed_at = UTC_TIMESTAMP() WHERE id = ?')
         ->execute([password_hash($new, PASSWORD_DEFAULT), $user['id']]);
     rate_limit_clear('pwchange:' . $user['id']);
-    json_out(['success' => true, 'message' => 'Password changed.']);
+    json_out(['success' => true, 'message' => 'Password changed. Other devices have been signed out.', 'token' => issue_token($user), 'user' => public_user($user, true)]);
 }
 
 fail('Unknown action.');

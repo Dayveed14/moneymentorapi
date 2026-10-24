@@ -1,7 +1,9 @@
 <?php
-// GET /api/admin_export.php?type=users|articles|messages|subscribers  (admin)  →  CSV download
+// GET /api/admin_export.php?type=users|articles|messages|subscribers|reports|questions|expenses_summary|research  (admin)  →  CSV download
+// "research" = anonymised first vs latest knowledge-check scores per learner, for analysis (no names or emails).
 declare(strict_types=1);
 require_once __DIR__ . '/../../src/bootstrap.php';
+require_once __DIR__ . '/../../src/assessment.php';
 
 require_method('GET');
 require_user('admin');
@@ -12,11 +14,16 @@ $queries = [
                    FROM articles a LEFT JOIN users u ON u.id = a.author_id ORDER BY a.id',
     'messages' => 'SELECT id, name, email, subject, message, is_read, created_at FROM contact_messages ORDER BY id',
     'subscribers' => 'SELECT id, email, created_at FROM subscribers ORDER BY id',
+    'reports' => 'SELECT id, channel, scammer_contact, description, lost_money, amount_lost, status, alert_id, created_at FROM scam_reports ORDER BY id',
+    'questions' => 'SELECT id, topic, question, answer, status, is_public, created_at, answered_at FROM questions ORDER BY id',
 ];
 $type = str_field($_GET, 'type', 20);
-$sql = $queries[$type] ?? fail('Unknown export type.');
-
-$rows = db()->query($sql)->fetchAll();
+if ($type === 'research') {
+    $rows = knowledge_gain_rows();
+} else {
+    $sql = $queries[$type] ?? fail('Unknown export type.');
+    $rows = db()->query($sql)->fetchAll();
+}
 
 header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename="moneymentor-' . $type . '-' . gmdate('Y-m-d') . '.csv"');

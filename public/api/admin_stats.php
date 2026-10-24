@@ -19,6 +19,9 @@ $stats = [
     'messages_unread' => $one('SELECT COUNT(*) FROM contact_messages WHERE is_read = 0'),
     'lessons_completed' => $one('SELECT COUNT(*) FROM lesson_progress'),
     'quiz_attempts' => $one('SELECT COUNT(*) FROM quiz_attempts'),
+    'reports_new' => $one("SELECT COUNT(*) FROM scam_reports WHERE status = 'new'"),
+    'questions_pending' => $one("SELECT COUNT(*) FROM questions WHERE status = 'pending'"),
+    'retested_learners' => $one('SELECT COUNT(*) FROM (SELECT user_id FROM assessments GROUP BY user_id HAVING COUNT(*) >= 2) t'),
     'active_learners' => $one('SELECT COUNT(DISTINCT user_id) FROM lesson_progress WHERE completed_at >= NOW() - INTERVAL 30 DAY'),
 ];
 
@@ -30,7 +33,11 @@ $activity = array_merge(
     $pdo->query("SELECT 'article' AS type, CONCAT(IF(status = 'published', 'Published: ', 'Draft saved: '), title) AS title,
                  created_at AS at FROM articles ORDER BY created_at DESC LIMIT 5")->fetchAll(),
     $pdo->query("SELECT 'message' AS type, CONCAT('Message from ', name, IF(subject <> '', CONCAT(': ', subject), '')) AS title,
-                 created_at AS at FROM contact_messages ORDER BY created_at DESC LIMIT 5")->fetchAll()
+                 created_at AS at FROM contact_messages ORDER BY created_at DESC LIMIT 5")->fetchAll(),
+    $pdo->query("SELECT 'report' AS type, CONCAT('Scam reported via ', channel) AS title, created_at AS at
+                 FROM scam_reports ORDER BY created_at DESC LIMIT 5")->fetchAll(),
+    $pdo->query("SELECT 'question' AS type, CONCAT('New question: ', LEFT(question, 60)) AS title, created_at AS at
+                 FROM questions ORDER BY created_at DESC LIMIT 5")->fetchAll()
 );
 usort($activity, fn ($a, $b) => strcmp((string) $b['at'], (string) $a['at']));
 $activity = array_slice($activity, 0, 8);

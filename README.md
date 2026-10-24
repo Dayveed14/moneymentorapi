@@ -10,8 +10,11 @@ public/            web root (only this folder is reachable from the internet)
   uploads/         images uploaded with the old version (served as plain files)
 src/               shared code: config, DB, auth tokens, rate limiting, helpers
 database/schema.sql
-bin/migrate.php    creates/upgrades tables + first admin (runs on every start-up)
-src/modules.php    learning module + lesson ids (keep in sync with the frontend's src/data/modules.js)
+bin/migrate.php    creates/upgrades tables + first admin (runs on every Docker start-up)
+src/migrations.php the upgrade steps; also run automatically on the first request after an update
+src/modules.php    learning module + lesson ids (keep in sync with the frontend's src/data/modules.js and modulesMore.js)
+src/mail.php       sending email through Brevo or Resend's HTTP API (or a local log file)
+storage/           mail.log in test mode (created automatically, not served, not in git)
 bin/move_images_to_cloudinary.php   one-off: moves existing images to Cloudinary
 docker/            Apache, PHP and start-up config
 Dockerfile, docker-compose.yml, render.yaml
@@ -47,11 +50,58 @@ Dockerfile, docker-compose.yml, render.yaml
 | GET/POST | `/api/admin_messages.php?page&filter=unread` | admin | Contact inbox / `{action: mark_read\|mark_unread\|delete}` |
 | GET/POST | `/api/admin_subscribers.php?page` | admin | Subscribers / `{action: delete}` |
 | GET | `/api/admin_learning.php` | admin | Lesson completions, quiz pass rates, knowledge-check levels and goals |
-| GET | `/api/admin_export.php?type=users\|articles\|messages\|subscribers` | admin | CSV download |
+| GET | `/api/admin_export.php?type=users\|articles\|messages\|subscribers\|reports\|questions\|research` | admin | CSV download. `research` = anonymised first vs latest knowledge-check scores per learner |
+| POST | `/api/forgot_password.php` | anyone | `{email}` → emails a reset link (valid 1 hour). Same answer whether or not the email exists |
+| POST | `/api/reset_password.php` | anyone | `{token, password}`. Signs the user out on every other device |
+| POST | `/api/unsubscribe.php` | anyone | `{email, token}` from the link in every newsletter/alert email |
+| POST | `/api/report_scam.php` | anyone | Report a scam: `{channel, scammer_contact, description, lost_money, amount_lost, name, email}` |
+| GET/POST | `/api/admin_reports.php?status&page` | admin | Scam reports + totals / `{action: set_status\|delete}` |
+| GET | `/api/get_help_contacts.php` | anyone | Published bank emergency codes and agencies |
+| GET/POST | `/api/admin_help_contacts.php` | admin | All help contacts / `{action: create\|update\|delete}` |
+| GET | `/api/share.php?article=\|alert=\|page=` | anyone | Link-preview page for WhatsApp/Facebook/X, then redirects to the frontend |
+| GET/POST | `/api/expenses.php?month=YYYY-MM` | logged in | Spending for a month with totals, trend and budget plan / `{action: add\|delete}` |
+| GET/POST | `/api/questions.php` | logged in | My "Ask an expert" questions / ask one (5 a day) |
+| GET | `/api/get_faq.php?topic&search` | anyone | Answered questions an admin made public (no names) |
+| GET/POST | `/api/admin_questions.php?status&page` | admin | Questions / `{action: answer\|set_public\|delete}`. Answers are emailed |
+| GET | `/api/get_lesson_videos.php?module=` | anyone | `{lesson_id: youtube_id}` |
+| POST | `/api/admin_lesson_videos.php` | admin | `{module, lesson, url}`; any YouTube link, empty removes it |
+| POST | `/api/admin_newsletter.php` | admin | `{action: test\|send, subject, body}` |
 
-On start-up `bin/migrate.php` creates any missing tables (including `assessments`
-and `scam_alerts`) and seeds five starter scam alerts the first time. Edit or
-unpublish them from the admin dashboard.
+Also changed: `admin_scam_alerts.php` takes `summary_pcm` (Pidgin summary), `report_id`
+(links the report an alert came from) and `{action: "email", id}`; `admin_messages.php` takes
+`{action: "reply", id, reply}`; `assessment.php` GET also returns `history`; `profile.php`
+`change_password` returns a fresh `token` and signs out other devices.
+
+On start-up `bin/migrate.php` creates any missing tables and columns, seeds five starter
+scam alerts, and seeds the help contacts the first time:
+- **Agencies** (NPF-NCCC, EFCC, FCCPC, SEC, CBN) are published, with links to their official websites.
+- **Bank emergency codes start as drafts.** Codes change and different sources list different ones,
+  so confirm each code with the bank and publish it from **Admin → Help contacts**. Nothing unconfirmed is shown publicly.
+
+## Database upgrades (XAMPP included)
+The API upgrades the database by itself. On the first request after you update the code, it
+compares the database with `SCHEMA_VERSION` in `src/migrations.php`, adds any missing tables and
+columns, then remembers the version in `storage/schema-version`, so later requests skip the check.
+On Render the same steps also run at start-up. To run them by hand and see each step:
+`php bin/migrate.php` (XAMPP: `C:\xampp\php\php.exe bin\migrate.php`). Set `AUTO_MIGRATE=false`
+to turn the automatic upgrade off.
+
+## Email
+Render's free plan blocks SMTP, so email goes through an HTTP API. Used for password resets,
+contact replies, answers to questions, scam alerts, newsletters and the subscribe welcome email.
+
+| Variable | Value |
+|---|---|
+| `MAIL_DRIVER` | `log` (default: nothing is sent, emails are written to `storage/mail.log`), `brevo` or `resend` |
+| `MAIL_FROM` / `MAIL_FROM_NAME` | Sender address and name |
+| `BREVO_API_KEY` | Brevo: free tier, about 300 emails a day. Verify your sender address in Brevo first |
+| `RESEND_API_KEY` | Resend: free tier, needs a domain you can verify |
+| `MAIL_BATCH_LIMIT` | Most emails sent per newsletter/alert (default 300, Brevo's free daily limit) |
+| `FRONTEND_URL` | Your Vercel URL, used for links in emails (defaults to the first `ALLOWED_ORIGINS` entry) |
+
+Brevo setup: sign up → **Senders, domains & IPs → Senders** → add and verify your address →
+**SMTP & API → API keys** → create a key. Then set `MAIL_DRIVER=brevo`, `BREVO_API_KEY`, `MAIL_FROM`.
+The admin dashboard shows a "test mode" note while `MAIL_DRIVER` is `log`.
 
 Logged-in requests send `Authorization: Bearer <token>`. Tokens are signed with
 `APP_SECRET` and last 7 days.
@@ -187,6 +237,9 @@ In Vercel → Project → Settings → Environment Variables: `VITE_API_URL=http
 - **Free Render services sleep when idle.** The first request after a quiet spell can take a while; later ones are fast.
 - Files already in `public/uploads/` are baked into the image, so old article images keep working until you run the move script.
 - Promote an existing account to admin by setting `ADMIN_EMAIL` to its email and restarting.
+- **Changing or resetting a password signs out every other device** (tokens issued before the change stop working).
+- **Link previews:** shares point at `/api/share.php?...` so WhatsApp shows a title, summary and image. The default image is the frontend's `public/og-image.png`.
+- **For your research:** Admin → Learning & quizzes → *Research data (CSV)* exports one anonymous row per learner (no names or emails): first and latest knowledge-check scores overall and per topic, days between, lessons completed and quizzes passed.
 
 ## What changed from the first version
 - **Login tokens were never checked.** They were random strings nobody stored. They're now signed tokens verified on every request.

@@ -1,6 +1,6 @@
 <?php
 // The knowledge check that personalises a learner's path
-//   GET  /api/assessment.php  →  { assessment: latest result | null }
+//   GET  /api/assessment.php  →  { assessment: latest result | null, history: every result oldest first }
 //   POST /api/assessment.php  { score, total, level, topic_scores, goals, path }
 declare(strict_types=1);
 require_once __DIR__ . '/../../src/bootstrap.php';
@@ -47,4 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ->execute([$user['id'], $score, $total, $level, json_encode($topics), json_encode(array_values(array_unique($goals))), json_encode($cleanPath)]);
 }
 
-json_out(['success' => true, 'assessment' => latest_assessment((int) $user['id'])]);
+json_out([
+    'success' => true,
+    'assessment' => latest_assessment((int) $user['id']),
+    'history' => assessment_history((int) $user['id']),
+]);

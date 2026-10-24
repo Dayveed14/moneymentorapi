@@ -86,9 +86,16 @@ function current_user(): ?array
     $token = bearer_token();
     $payload = $token ? verify_token($token) : null;
     if ($payload) {
-        $stmt = db()->prepare('SELECT id, name, email, role FROM users WHERE id = ?');
+        $stmt = db()->prepare('SELECT id, name, email, role, UNIX_TIMESTAMP(password_changed_at) AS pw_changed FROM users WHERE id = ?');
         $stmt->execute([$payload['sub']]);
         $user = $stmt->fetch() ?: null;
+        // Tokens issued before a password change or reset no longer work
+        if ($user && $user['pw_changed'] !== null && (int) ($payload['iat'] ?? 0) < (int) $user['pw_changed']) {
+            $user = null;
+        }
+        if ($user) {
+            unset($user['pw_changed']);
+        }
     }
     return $user;
 }

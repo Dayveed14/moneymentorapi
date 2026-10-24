@@ -51,12 +51,14 @@ $latest = $pdo->query('
 
 $levels = array_fill_keys(ASSESSMENT_LEVELS, 0);
 $topicTotals = array_fill_keys(ASSESSMENT_TOPICS, 0);
+$topicCounts = array_fill_keys(ASSESSMENT_TOPICS, 0);
 $goalCounts = array_fill_keys(ASSESSMENT_TOPICS, 0);
 foreach ($latest as $row) {
     $levels[$row['level']] = ($levels[$row['level']] ?? 0) + 1;
     foreach ((array) json_decode($row['topic_scores'], true) as $topic => $score) {
         if (isset($topicTotals[$topic])) {
             $topicTotals[$topic] += (int) $score;
+            $topicCounts[$topic]++;
         }
     }
     foreach ((array) json_decode($row['goals'], true) as $goal) {
@@ -67,7 +69,11 @@ foreach ($latest as $row) {
 }
 $n = count($latest);
 // Each topic has 2 questions → average correct out of 2, as a percentage
-$topicAverages = array_map(fn ($t) => $n ? (int) round($t / ($n * 2) * 100) : null, $topicTotals);
+// (counted per topic, because older results don't include topics added later)
+$topicAverages = [];
+foreach ($topicTotals as $t => $total) {
+    $topicAverages[$t] = $topicCounts[$t] ? (int) round($total / ($topicCounts[$t] * 2) * 100) : null;
+}
 
 json_out([
     'success' => true,
@@ -78,4 +84,5 @@ json_out([
         'topic_average_percent' => $topicAverages,
         'goals' => $goalCounts,
     ],
+    'gain' => knowledge_gain_summary(),
 ]);

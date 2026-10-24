@@ -14,6 +14,7 @@ COPY src ./src
 COPY public ./public
 COPY database ./database
 COPY bin ./bin
+RUN mkdir -p storage
 
 RUN chmod +x /usr/local/bin/moneymentor-entrypoint \
     && chown -R www-data:www-data /var/www/html

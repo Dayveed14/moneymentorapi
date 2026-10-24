@@ -39,5 +39,11 @@ function db(): PDO
         error_log('[moneymentor] DB connection failed: ' . $e->getMessage());
         fail('The service is temporarily unavailable. Please try again shortly.', 503);
     }
+
+    // Upgrade the database automatically after an update (XAMPP never runs bin/migrate.php)
+    if (env_bool('AUTO_MIGRATE', true)) {
+        require_once __DIR__ . '/migrations.php';
+        ensure_schema($pdo);
+    }
     return $pdo;
 }

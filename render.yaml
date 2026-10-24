@@ -31,3 +31,13 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      - key: FRONTEND_URL
+        value: https://money-mentor-theta.vercel.app
+      - key: MAIL_DRIVER
+        value: brevo        # or resend; "log" sends nothing
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: MoneyMentor
+      - key: BREVO_API_KEY
+        sync: false

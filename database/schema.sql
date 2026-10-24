@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   password VARCHAR(255) NOT NULL,
   role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
   last_login DATETIME NULL,
+  password_changed_at DATETIME NULL,         -- tokens issued before this stop working
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -46,6 +47,8 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   message TEXT NOT NULL,
   ip_address VARCHAR(45) NULL,
   is_read TINYINT(1) NOT NULL DEFAULT 0,
+  reply TEXT NULL,
+  replied_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -122,7 +125,91 @@ CREATE TABLE IF NOT EXISTS scam_alerts (
   what_to_do TEXT NOT NULL,         -- one step per line
   severity ENUM('high', 'medium', 'low') NOT NULL DEFAULT 'medium',
   status ENUM('draft', 'published') NOT NULL DEFAULT 'published',
+  summary_pcm TEXT NULL,            -- Pidgin version of the summary (optional)
+  emailed_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_alerts_status (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Password reset links (token stored hashed, valid 1 hour) =====
+CREATE TABLE IF NOT EXISTS password_resets (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  token_hash CHAR(64) NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_resets_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Scams reported by visitors (reviewed by admins, can become alerts) =====
+CREATE TABLE IF NOT EXISTS scam_reports (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  name VARCHAR(120) NOT NULL DEFAULT '',
+  email VARCHAR(190) NOT NULL DEFAULT '',
+  channel VARCHAR(20) NOT NULL,             -- call, sms, whatsapp, email, social, website, in_person, other
+  scammer_contact VARCHAR(190) NOT NULL DEFAULT '',  -- number, account, link or handle they used
+  description TEXT NOT NULL,
+  lost_money TINYINT(1) NOT NULL DEFAULT 0,
+  amount_lost DECIMAL(14,2) NULL,
+  status ENUM('new', 'reviewed', 'published', 'rejected') NOT NULL DEFAULT 'new',
+  alert_id INT UNSIGNED NULL,
+  ip_address VARCHAR(45) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_reports_status (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Who to call: bank fraud lines and agencies (managed by admins) =====
+CREATE TABLE IF NOT EXISTS help_contacts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  kind ENUM('bank', 'agency') NOT NULL DEFAULT 'bank',
+  ussd VARCHAR(40) NOT NULL DEFAULT '',     -- code to block the account, e.g. *123*911#
+  phone VARCHAR(120) NOT NULL DEFAULT '',
+  url VARCHAR(300) NOT NULL DEFAULT '',
+  note VARCHAR(300) NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_help_status (status, kind, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Expense tracking (actual spending, compared with the budget plan) =====
+CREATE TABLE IF NOT EXISTS expenses (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  amount DECIMAL(14,2) NOT NULL,
+  category VARCHAR(80) NOT NULL,
+  type ENUM('need', 'want', 'saving') NOT NULL DEFAULT 'need',
+  note VARCHAR(200) NOT NULL DEFAULT '',
+  spent_on DATE NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_expenses_user (user_id, spent_on)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Ask an expert (answered by admins; good answers become a public FAQ) =====
+CREATE TABLE IF NOT EXISTS questions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  topic VARCHAR(30) NOT NULL DEFAULT 'other',
+  question TEXT NOT NULL,
+  answer TEXT NULL,
+  status ENUM('pending', 'answered') NOT NULL DEFAULT 'pending',
+  is_public TINYINT(1) NOT NULL DEFAULT 0,
+  answered_by INT UNSIGNED NULL,
+  answered_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_questions_user (user_id),
+  INDEX idx_questions_status (status, is_public)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===== Optional YouTube video for a lesson =====
+CREATE TABLE IF NOT EXISTS lesson_videos (
+  module_id VARCHAR(40) NOT NULL,
+  lesson_id VARCHAR(60) NOT NULL,
+  youtube_id VARCHAR(20) NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (module_id, lesson_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
